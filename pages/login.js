@@ -73,13 +73,6 @@ export default function LoginPage() {
       <div style={styles.root}>
         {/* ── LEFT PANEL – Form ── */}
         <div style={styles.left}>
-          {/* Back to home */}
-          <a href="/" style={styles.backLink}>
-            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-            </svg>
-            Back to Groww
-          </a>
 
           <div style={styles.formCard}>
             {/* Logo */}
@@ -328,19 +321,6 @@ const styles = {
     padding: "40px 32px",
     position: "relative",
     minHeight: "100vh",
-  },
-  backLink: {
-    position: "absolute",
-    top: 24,
-    left: 28,
-    display: "flex",
-    alignItems: "center",
-    gap: 5,
-    fontSize: 13,
-    color: "#6b7280",
-    textDecoration: "none",
-    fontWeight: 500,
-    transition: "color 0.15s",
   },
   formCard: {
     width: "100%",

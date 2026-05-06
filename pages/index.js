@@ -38,6 +38,7 @@ const EXAMPLES = [
 
 export default function Home() {
   const router = useRouter();
+  const [authChecked, setAuthChecked] = useState(false);
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState([
     {
@@ -63,9 +64,17 @@ export default function Home() {
   useEffect(() => {
     try {
       const saved = localStorage.getItem("groww_user");
-      if (saved) setUser(JSON.parse(saved));
-    } catch (_) {}
-  }, []);
+      if (saved) {
+        setUser(JSON.parse(saved));
+      } else {
+        router.replace("/login");
+      }
+    } catch (_) {
+      router.replace("/login");
+    } finally {
+      setAuthChecked(true);
+    }
+  }, [router]);
 
   // Close profile dropdown on outside click
   useEffect(() => {
@@ -100,6 +109,7 @@ export default function Home() {
     setUser(null);
     setShowProfileMenu(false);
     try { localStorage.removeItem("groww_user"); } catch (_) {}
+    router.replace("/login");
   }
 
   useEffect(() => {
@@ -169,6 +179,8 @@ export default function Home() {
       </div>
     );
   }
+
+  if (!authChecked || !user) return null;
 
   return (
     <>
