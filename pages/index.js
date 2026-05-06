@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import Head from "next/head";
+import { useRouter } from "next/router";
 
 const TICKERS = [
   { name: "NIFTY 50", val: "24,052.70", chg: "-66.60 (0.28%)", up: false },
@@ -36,6 +37,7 @@ const EXAMPLES = [
 ];
 
 export default function Home() {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState([
     {
@@ -47,6 +49,58 @@ export default function Home() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef(null);
+
+  // ── AUTH STATE ──
+  const [user, setUser] = useState(null);
+  const [showAuth, setShowAuth] = useState(false);
+  const [authMode, setAuthMode] = useState("login");
+  const [authForm, setAuthForm] = useState({ name: "", email: "", password: "" });
+  const [authError, setAuthError] = useState("");
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const profileRef = useRef(null);
+
+  // Restore auth from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("groww_user");
+      if (saved) setUser(JSON.parse(saved));
+    } catch (_) {}
+  }, []);
+
+  // Close profile dropdown on outside click
+  useEffect(() => {
+    function handleClick(e) {
+      if (profileRef.current && !profileRef.current.contains(e.target)) {
+        setShowProfileMenu(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  function openAuth(mode) {
+    setAuthMode(mode);
+    setAuthError("");
+    setAuthForm({ name: "", email: "", password: "" });
+    setShowAuth(true);
+  }
+
+  function handleAuthSubmit(e) {
+    e.preventDefault();
+    setAuthError("");
+    if (!authForm.email.includes("@")) { setAuthError("Enter a valid email."); return; }
+    if (authForm.password.length < 6)  { setAuthError("Password must be at least 6 characters."); return; }
+    if (authMode === "signup" && !authForm.name.trim()) { setAuthError("Enter your full name."); return; }
+    const name = authMode === "signup" ? authForm.name.trim() : authForm.email.split("@")[0];
+    setUser({ name, email: authForm.email });
+    setShowAuth(false);
+  }
+
+  function handleLogout() {
+    setUser(null);
+    setShowProfileMenu(false);
+    try { localStorage.removeItem("groww_user"); } catch (_) {}
+  }
 
   useEffect(() => {
     if (open) messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -149,9 +203,44 @@ export default function Home() {
               paddingBottom: 4
             }}>{tab}</a>
           ))}
-          <div style={{ marginLeft: "auto", display: "flex", gap: 12 }}>
-            <button style={{ background: "none", border: "1px solid #ddd", borderRadius: 6, padding: "6px 16px", fontSize: 13, cursor: "pointer", color: "#444" }}>Login</button>
-            <button style={{ background: "linear-gradient(135deg,#00b386,#5b4ce6)", border: "none", borderRadius: 6, padding: "6px 16px", fontSize: 13, cursor: "pointer", color: "#fff", fontWeight: 600 }}>Sign Up</button>
+          <div style={{ marginLeft: "auto", display: "flex", gap: 12, alignItems: "center" }}>
+            {user ? (
+              <div className="profile-wrap" ref={profileRef}>
+                <button
+                  id="profile-avatar-btn"
+                  className="profile-avatar"
+                  onClick={() => setShowProfileMenu(v => !v)}
+                  title={user.name}
+                >
+                  {user.name.charAt(0).toUpperCase()}
+                </button>
+                {showProfileMenu && (
+                  <div className="profile-dropdown">
+                    <div className="profile-dropdown-header">
+                      <div className="name">{user.name}</div>
+                      <div className="email">{user.email}</div>
+                    </div>
+                    <button className="profile-dropdown-item">👤 My Profile</button>
+                    <button className="profile-dropdown-item">📊 My Investments</button>
+                    <button className="profile-dropdown-item">⚙️ Settings</button>
+                    <button className="profile-dropdown-item danger" onClick={handleLogout}>🚪 Log Out</button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <>
+                <button
+                  id="login-btn"
+                  onClick={() => router.push("/login")}
+                  style={{ background: "none", border: "1px solid #ddd", borderRadius: 6, padding: "6px 16px", fontSize: 13, cursor: "pointer", color: "#444", fontFamily: "inherit" }}
+                >Login</button>
+                <button
+                  id="signup-btn"
+                  onClick={() => router.push("/login?mode=signup")}
+                  style={{ background: "linear-gradient(135deg,#00b386,#5b4ce6)", border: "none", borderRadius: 6, padding: "6px 16px", fontSize: 13, cursor: "pointer", color: "#fff", fontWeight: 600, fontFamily: "inherit" }}
+                >Sign Up</button>
+              </>
+            )}
           </div>
         </nav>
 
@@ -256,6 +345,79 @@ export default function Home() {
 
           </div>
         </div>
+
+        {/* ── AUTH MODAL ── */}
+        {showAuth && (
+          <div className="auth-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowAuth(false); }}>
+            <div className="auth-modal">
+              <button className="auth-close" onClick={() => setShowAuth(false)}>✕</button>
+
+              {/* Brand */}
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
+                <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#00b386", display: "grid", placeItems: "center" }}>
+                  <span style={{ color: "#fff", fontSize: 12, fontWeight: 700 }}>G</span>
+                </div>
+                <span style={{ fontWeight: 700, fontSize: 16, color: "#1a1a2e" }}>Groww</span>
+              </div>
+
+              <h2>{authMode === "login" ? "Welcome back!" : "Create account"}</h2>
+              <p className="subtitle">
+                {authMode === "login"
+                  ? "Log in to access your investments and watchlist."
+                  : "Join Groww and start investing in minutes."}
+              </p>
+
+              <form onSubmit={handleAuthSubmit}>
+                {authError && <div className="auth-error">{authError}</div>}
+                <div className="auth-input-group">
+                  {authMode === "signup" && (
+                    <div>
+                      <label htmlFor="auth-name">Full Name</label>
+                      <input
+                        id="auth-name"
+                        type="text"
+                        placeholder="Preetham Rag"
+                        value={authForm.name}
+                        onChange={e => setAuthForm(f => ({ ...f, name: e.target.value }))}
+                      />
+                    </div>
+                  )}
+                  <div>
+                    <label htmlFor="auth-email">Email</label>
+                    <input
+                      id="auth-email"
+                      type="email"
+                      placeholder="you@example.com"
+                      value={authForm.email}
+                      onChange={e => setAuthForm(f => ({ ...f, email: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="auth-password">Password</label>
+                    <input
+                      id="auth-password"
+                      type="password"
+                      placeholder="Min. 6 characters"
+                      value={authForm.password}
+                      onChange={e => setAuthForm(f => ({ ...f, password: e.target.value }))}
+                    />
+                  </div>
+                </div>
+                <button type="submit" className="auth-btn-primary">
+                  {authMode === "login" ? "Log In" : "Create Account"}
+                </button>
+              </form>
+
+              <div className="auth-switch">
+                {authMode === "login" ? (
+                  <>Don&apos;t have an account?{" "}<button onClick={() => { setAuthMode("signup"); setAuthError(""); }}>Sign Up</button></>
+                ) : (
+                  <>Already have an account?{" "}<button onClick={() => { setAuthMode("login"); setAuthError(""); }}>Log In</button></>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ── FLOATING CHAT WIDGET ── */}
         {open && (
